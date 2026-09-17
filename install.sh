@@ -8,22 +8,20 @@ export SCRIPT_DIR
 TARGET_DIR="${HOME}/.gemini/config"
 
 # 1. Antigravity AI Customizations (~/.gemini/config)
-echo "[1/2] Installing AI Modes (/agent, /ask, /plan)..."
+echo "[1/2] Installing AI Modes (/1-ask, /2-plan, /3-goal, /4-agent)..."
 mkdir -p "${TARGET_DIR}/rules"
 mkdir -p "${TARGET_DIR}/workflows"
 mkdir -p "${TARGET_DIR}/global_workflows"
-mkdir -p "${TARGET_DIR}/skills/agent"
-mkdir -p "${TARGET_DIR}/skills/ask"
-mkdir -p "${TARGET_DIR}/skills/plan"
+
+# Clean up any legacy skills or workflows
+rm -rf "${TARGET_DIR}/skills/agent" "${TARGET_DIR}/skills/ask" "${TARGET_DIR}/skills/plan"
+rm -rf "${TARGET_DIR}/workflows/"* "${TARGET_DIR}/global_workflows/"*
 
 cp "${SCRIPT_DIR}/config/GEMINI.md" "${TARGET_DIR}/GEMINI.md"
 cp "${SCRIPT_DIR}/config/AGENTS.md" "${TARGET_DIR}/AGENTS.md"
 cp "${SCRIPT_DIR}/config/rules/"*.md "${TARGET_DIR}/rules/"
 cp "${SCRIPT_DIR}/config/workflows/"*.md "${TARGET_DIR}/workflows/"
 cp "${SCRIPT_DIR}/config/global_workflows/"*.md "${TARGET_DIR}/global_workflows/"
-cp "${SCRIPT_DIR}/config/skills/agent/SKILL.md" "${TARGET_DIR}/skills/agent/SKILL.md"
-cp "${SCRIPT_DIR}/config/skills/ask/SKILL.md" "${TARGET_DIR}/skills/ask/SKILL.md"
-cp "${SCRIPT_DIR}/config/skills/plan/SKILL.md" "${TARGET_DIR}/skills/plan/SKILL.md"
 echo "  ✓ AI Modes installed to ${TARGET_DIR}."
 
 # 2. Antigravity IDE Editor Settings & Keybindings (Tab Autocomplete)

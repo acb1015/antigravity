@@ -7,15 +7,12 @@ $ScriptDir = $PSScriptRoot
 $TargetDir = Join-Path $env:USERPROFILE ".gemini\config"
 
 # 1. AI Customizations (~/.gemini/config)
-Write-Host "[1/2] Installing AI Modes (/agent, /ask, /plan)..." -ForegroundColor Yellow
+Write-Host "[1/2] Installing AI Modes (/1-ask, /2-plan, /3-goal, /4-agent)..." -ForegroundColor Yellow
 
 $Dirs = @(
     "$TargetDir\rules",
     "$TargetDir\workflows",
-    "$TargetDir\global_workflows",
-    "$TargetDir\skills\agent",
-    "$TargetDir\skills\ask",
-    "$TargetDir\skills\plan"
+    "$TargetDir\global_workflows"
 )
 
 foreach ($Dir in $Dirs) {
@@ -24,14 +21,26 @@ foreach ($Dir in $Dirs) {
     }
 }
 
+# Remove legacy skills
+$LegacySkills = @(
+    "$TargetDir\skills\agent",
+    "$TargetDir\skills\ask",
+    "$TargetDir\skills\plan"
+)
+foreach ($Skill in $LegacySkills) {
+    if (Test-Path $Skill) {
+        Remove-Item -Path $Skill -Recurse -Force
+    }
+}
+
+Get-ChildItem -Path "$TargetDir\workflows\*" -Include *.md | Remove-Item -Force
+Get-ChildItem -Path "$TargetDir\global_workflows\*" -Include *.md | Remove-Item -Force
+
 Copy-Item "$ScriptDir\config\GEMINI.md" "$TargetDir\GEMINI.md" -Force
 Copy-Item "$ScriptDir\config\AGENTS.md" "$TargetDir\AGENTS.md" -Force
 Copy-Item "$ScriptDir\config\rules\*.md" "$TargetDir\rules\" -Force
 Copy-Item "$ScriptDir\config\workflows\*.md" "$TargetDir\workflows\" -Force
 Copy-Item "$ScriptDir\config\global_workflows\*.md" "$TargetDir\global_workflows\" -Force
-Copy-Item "$ScriptDir\config\skills\agent\SKILL.md" "$TargetDir\skills\agent\SKILL.md" -Force
-Copy-Item "$ScriptDir\config\skills\ask\SKILL.md" "$TargetDir\skills\ask\SKILL.md" -Force
-Copy-Item "$ScriptDir\config\skills\plan\SKILL.md" "$TargetDir\skills\plan\SKILL.md" -Force
 Write-Host "  ✓ AI Modes installed to $TargetDir." -ForegroundColor Green
 
 # 2. IDE Editor Settings (Tab Autocomplete)
