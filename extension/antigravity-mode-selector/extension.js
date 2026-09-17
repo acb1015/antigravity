@@ -23,7 +23,7 @@ always_on: true
 - **파일 수정/생성 도구 절대 금지**: write_to_file, replace_file_content, multi_replace_file_content 등 어떠한 파일 수정 도구도 호출하지 마세요.
 - **터미널 명령어 직접 실행 절대 금지**: run_command를 직접 실행하지 마세요.
 - **허용 도구**: view_file, list_dir, grep_search 등 순수 읽기 도구만 허용됩니다.
-- **응답 규칙**: 답변 시작 시 첫 줄에 \`[🛡️ ASK MODE (UI 활성화 중)]\` 배지를 반드시 표시하고, 수정할 코드가 있다면 제안 코드 블록으로만 안내하세요.`
+- **응답 규칙**: [🛡️ ASK MODE] 같은 인위적인 대괄호 배지나 태그는 일절 출력하지 마세요. 파일 수정이나 실행 요청이 들어오면 자연스럽게 "현재 Ask 모드(읽기 전용)라서 직접 수정하지 못합니다"와 같이 친절한 대화체 문장으로 안내하고, 필요한 제안 코드 블록을 제공하세요.`
   },
   plan: {
     id: 'plan',
@@ -43,7 +43,7 @@ always_on: true
 현재 사용자가 Antigravity 전용 UI 패널에서 [Plan 모드]를 활성화했습니다.
 - **즉시 코드 작성 금지**: 바로 파일을 수정하거나 코드를 작성하지 마세요.
 - **상세 구현 계획 수립**: 요구사항 분석, 변경할 파일 목록, 핵심 로직 및 검증 계획을 포함한 기획서를 먼저 작성하여 사용자 승인을 요청하세요.
-- **응답 규칙**: 답변 시작 시 첫 줄에 \`[📝 PLAN MODE (UI 활성화 중)]\` 배지를 반드시 표시하세요.`
+- **응답 규칙**: 인위적인 대괄호 배지는 출력하지 말고, 자연스러운 문장으로 계획을 제시하세요.`
   },
   goal: {
     id: 'goal',
@@ -62,7 +62,7 @@ always_on: true
 # [UI ACTIVE MODE: GOAL MODE (목표 완수)]
 현재 사용자가 Antigravity 전용 UI 패널에서 [Goal 모드]를 활성화했습니다.
 - **철저한 목표 완수**: 사용자의 목표가 완전히 달성될 때까지 스스로 디버깅, 테스트, 자가 수정을 거듭하며 작업을 멈추지 않고 끝까지 수행하세요.
-- **응답 규칙**: 답변 시작 시 첫 줄에 \`[🎯 GOAL MODE (UI 활성화 중)]\` 배지를 반드시 표시하세요.`
+- **응답 규칙**: 인위적인 대괄호 배지는 출력하지 말고, 목표 완수를 위한 과정을 진행하세요.`
   },
   agent: {
     id: 'agent',
@@ -81,7 +81,7 @@ always_on: true
 # [UI ACTIVE MODE: AGENT MODE (전권 자율 실행)]
 현재 사용자가 Antigravity 전용 UI 패널에서 [Agent 모드]를 활성화했습니다.
 - **모든 권한 자율 활용**: 파일 생성, 수정, 삭제, 터미널 명령어 실행 등을 스스로 판단하여 적극적으로 완수하세요.
-- **응답 규칙**: 답변 시작 시 첫 줄에 \`[⚡ AGENT MODE (기본 자율 실행)]\` 배지를 표시하세요.`
+- **응답 규칙**: 인위적인 대괄호 배지 없이 자연스럽게 요청 작업을 자율적으로 수행하고 보고하세요.`
   }
 };
 
@@ -445,7 +445,7 @@ function getSidebarHtml(activeModeId) {
       🔄 Ask ↔ Agent 빠른 토글
     </button>
     <div class="shortcut-hint">단축키: <b>Cmd+Alt+A</b> (Mac) / <b>Ctrl+Alt+A</b> (Win)</div>
-    <div class="shortcut-hint" style="margin-top:4px;">하단 상태표시줄 버튼 또는 <b>Cmd+Alt+M</b></div>
+    <div class="shortcut-hint" style="margin-top:4px;">상단 툴바 / 하단 상태바 또는 <b>Cmd+Alt+M</b></div>
   </div>
 
   <script>
