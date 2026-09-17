@@ -194,16 +194,24 @@ function syncRuleFile(modeId) {
       }
     }
 
-    // 4. [CRITICAL] Workspace Auto-Sync: 어디서든 어떤 프로젝트를 열어도 실시간 영구 동기화
+    // 4. [Clean Workspace] 개별 프로젝트 폴더를 오염시키지 않고 전역(~/.gemini/config)으로만 동작하도록 보장
+    // 프로젝트 폴더 내 기존 자동 생성된 GEMINI.md, AGENTS.md가 있다면 자동 정리하여 워크스페이스를 깨끗하게 유지
     if (vscode.workspace && vscode.workspace.workspaceFolders) {
       for (const folder of vscode.workspace.workspaceFolders) {
         const folderPath = folder.uri.fsPath;
-        if (folderPath && fs.existsSync(folderPath)) {
-          try {
-            fs.writeFileSync(path.join(folderPath, 'GEMINI.md'), fullContent, 'utf-8');
-            fs.writeFileSync(path.join(folderPath, 'AGENTS.md'), fullContent, 'utf-8');
-          } catch (folderErr) {
-            console.error(`Failed to sync to workspace folder ${folderPath}:`, folderErr);
+        if (folderPath && fs.existsSync(folderPath) && folderPath !== repoPath) {
+          for (const fileName of ['GEMINI.md', 'AGENTS.md']) {
+            const targetFile = path.join(folderPath, fileName);
+            if (fs.existsSync(targetFile)) {
+              try {
+                const header = fs.readFileSync(targetFile, 'utf-8').slice(0, 100);
+                if (header.includes('AI Interaction Modes Guidelines')) {
+                  fs.unlinkSync(targetFile);
+                }
+              } catch (cleanErr) {
+                // ignore clean errors
+              }
+            }
           }
         }
       }
