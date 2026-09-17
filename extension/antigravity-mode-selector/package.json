@@ -2,7 +2,7 @@
   "name": "mode-selector-ui",
   "displayName": "Antigravity AI Mode Selector",
   "description": "Mode Selector in Status Bar for Antigravity AI modes (Agent, Ask, Plan, Goal)",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "publisher": "acb",
   "engines": {
     "vscode": "^1.80.0"
