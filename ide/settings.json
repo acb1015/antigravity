@@ -1,0 +1,16 @@
+{
+    "securecoder.enabled": true,
+    "security.promptForLocalFileProtocolHandling": false,
+    "python.languageServer": "Default",
+    "terminal.integrated.inheritEnv": false,
+    "editor.fontSize": 14,
+    "workbench.editor.enablePreview": false,
+    "editor.tabCompletion": "on",
+    "editor.suggestSelection": "first",
+    "editor.quickSuggestionsDelay": 0,
+    "editor.quickSuggestions": {
+        "other": "on",
+        "comments": "off",
+        "strings": "off"
+    }
+}
