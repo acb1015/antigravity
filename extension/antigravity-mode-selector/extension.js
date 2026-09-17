@@ -2,28 +2,16 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const http = require('http');
 
 const MODES = {
   ask: {
     id: 'ask',
     name: 'Ask 모드',
-    badgeText: '$(shield) AI: ASK',
+    badgeText: '$(comment-discussion) AI: ASK',
     fullName: 'Ask 모드 (읽기 전용)',
     badgeColor: 'statusBarItem.warningBackground',
-    icon: '🛡️',
-    desc: '파일 수정 및 명령어 실행 절대 금지 (순수 질의응답 및 설명)',
-    permissions: '읽기 전용 (수정/실행 금지)',
-    ruleContent: `---
-description: Current active AI mode selected from UI (Ask Mode)
-always_on: true
----
-
-# [UI ACTIVE MODE: ASK MODE (읽기 전용)]
-현재 사용자가 Antigravity 전용 UI 패널에서 [Ask 모드]를 활성화했습니다.
-- **파일 수정/생성 도구 절대 금지**: write_to_file, replace_file_content, multi_replace_file_content 등 어떠한 파일 수정 도구도 호출하지 마세요.
-- **터미널 명령어 직접 실행 절대 금지**: run_command를 직접 실행하지 마세요.
-- **허용 도구**: view_file, list_dir, grep_search 등 순수 읽기 도구만 허용됩니다.
-- **응답 규칙**: [🛡️ ASK MODE] 같은 인위적인 대괄호 배지나 태그는 일절 출력하지 마세요. 파일 수정이나 실행 요청이 들어오면 자연스럽게 "현재 Ask 모드(읽기 전용)라서 직접 수정하지 못합니다"와 같이 친절한 대화체 문장으로 안내하고, 필요한 제안 코드 블록을 제공하세요.`
+    desc: '파일 수정 및 명령어 실행 절대 금지 (순수 질의응답 및 설명)'
   },
   plan: {
     id: 'plan',
@@ -31,38 +19,15 @@ always_on: true
     badgeText: '$(book) AI: PLAN',
     fullName: 'Plan 모드 (계획 수립)',
     badgeColor: undefined,
-    icon: '📝',
-    desc: '코드 작성 전 상세 기획서 및 구현 계획 승인',
-    permissions: '기획서 작성 후 승인 대기',
-    ruleContent: `---
-description: Current active AI mode selected from UI (Plan Mode)
-always_on: true
----
-
-# [UI ACTIVE MODE: PLAN MODE (계획 수립)]
-현재 사용자가 Antigravity 전용 UI 패널에서 [Plan 모드]를 활성화했습니다.
-- **즉시 코드 작성 금지**: 바로 파일을 수정하거나 코드를 작성하지 마세요.
-- **상세 구현 계획 수립**: 요구사항 분석, 변경할 파일 목록, 핵심 로직 및 검증 계획을 포함한 기획서를 먼저 작성하여 사용자 승인을 요청하세요.
-- **응답 규칙**: 인위적인 대괄호 배지는 출력하지 말고, 자연스러운 문장으로 계획을 제시하세요.`
+    desc: '코드 작성 전 상세 기획서 및 구현 계획 승인'
   },
-  goal: {
-    id: 'goal',
-    name: 'Goal 모드',
-    badgeText: '$(target) AI: GOAL',
-    fullName: 'Goal 모드 (목표 완수)',
+  debug: {
+    id: 'debug',
+    name: 'Debug 모드',
+    badgeText: '$(bug) AI: DEBUG',
+    fullName: 'Debug 모드 (버그 해결)',
     badgeColor: undefined,
-    icon: '🎯',
-    desc: '목표가 100% 달성될 때까지 포기하지 않고 자율 완수',
-    permissions: '자율 디버깅 & 테스트 무제한 완수',
-    ruleContent: `---
-description: Current active AI mode selected from UI (Goal Mode)
-always_on: true
----
-
-# [UI ACTIVE MODE: GOAL MODE (목표 완수)]
-현재 사용자가 Antigravity 전용 UI 패널에서 [Goal 모드]를 활성화했습니다.
-- **철저한 목표 완수**: 사용자의 목표가 완전히 달성될 때까지 스스로 디버깅, 테스트, 자가 수정을 거듭하며 작업을 멈추지 않고 끝까지 수행하세요.
-- **응답 규칙**: 인위적인 대괄호 배지는 출력하지 말고, 목표 완수를 위한 과정을 진행하세요.`
+    desc: '원인 분석 및 100% 버그 해결을 위한 자율 디버깅'
   },
   agent: {
     id: 'agent',
@@ -70,25 +35,14 @@ always_on: true
     badgeText: '$(zap) AI: AGENT',
     fullName: 'Agent 모드 (전권 자율)',
     badgeColor: undefined,
-    icon: '⚡',
-    desc: '모든 권한 자율 활용 (파일 생성/수정, 터미널 실행)',
-    permissions: '전권 자율 실행 (기본 모드)',
-    ruleContent: `---
-description: Current active AI mode selected from UI (Agent Mode)
-always_on: true
----
-
-# [UI ACTIVE MODE: AGENT MODE (전권 자율 실행)]
-현재 사용자가 Antigravity 전용 UI 패널에서 [Agent 모드]를 활성화했습니다.
-- **모든 권한 자율 활용**: 파일 생성, 수정, 삭제, 터미널 명령어 실행 등을 스스로 판단하여 적극적으로 완수하세요.
-- **응답 규칙**: 인위적인 대괄호 배지 없이 자연스럽게 요청 작업을 자율적으로 수행하고 보고하세요.`
+    desc: '모든 권한 자율 활용 (파일 생성/수정, 터미널 실행)'
   }
 };
 
 let currentMode = 'ask';
 let statusBarItem;
-let currentWebviewView = null;
 let extContext = null;
+let bridgeServer = null;
 
 function generateFullGeminiRule(modeId) {
   let section0 = '';
@@ -108,12 +62,12 @@ function generateFullGeminiRule(modeId) {
 - **즉각적인 코드 작성 금지**: 파일 수정이나 코드 작성을 바로 시작하지 마세요.
 - **상세 구현 계획 수립**: 요구사항 분석, 변경/생성할 파일 목록, 핵심 로직 및 설계, 검증(테스트) 계획을 정리한 기획서/구현 계획을 먼저 작성하여 제시하세요.
 - **승인 후 실행**: 사용자에게 계획을 공유하고 질문 또는 승인을 요청하세요. 사용자가 계획을 확인하고 승인한 후에 비로소 실행 단계(Agent)로 넘어갑니다.`;
-  } else if (modeId === 'goal') {
-    section0 = `## 0. 기본 동작 (UI 설정) -> \`Goal\` 모드 적용 (최우선 강제 적용)
-- 현재 Antigravity UI에서 사용자가 **Goal 모드(목표 완수)**를 선택해 두었습니다.
-- 사용자의 메시지에 별도의 슬래시 커맨드가 없더라도, **무조건 최우선으로 Goal 모드로 동작**해야 합니다.
-- 사용자가 설정한 목표가 100% 달성될 때까지 디버깅, 테스트, 자가 수정을 거듭하며 작업을 멈추지 않고 끝까지 수행하세요.
-- 복잡하거나 시간이 걸리는 작업에 적합합니다.`;
+  } else if (modeId === 'debug') {
+    section0 = `## 0. 기본 동작 (UI 설정) -> \`Debug\` 모드 적용 (최우선 강제 적용)
+- 현재 Antigravity UI에서 사용자가 **Debug 모드(버그 분석 및 해결)**를 선택해 두었습니다.
+- 사용자의 메시지에 별도의 슬래시 커맨드가 없더라도, **무조건 최우선으로 Debug 모드로 동작**해야 합니다.
+- 버그의 원인을 정확히 추적하고, 필요한 모든 디버깅, 로그 분석, 테스트 및 코드 수정을 자율적으로 완수하세요.
+- 문제가 100% 해결될 때까지 포기하지 않고 자율적으로 끝까지 디버깅을 완수하세요.`;
   } else {
     section0 = `## 0. 기본 동작 (UI 설정) -> \`Agent\` 모드 적용 (기본 전권 자율)
 - 현재 Antigravity UI에서 사용자가 **Agent 모드(전권 자율)**를 선택해 두었습니다.
@@ -151,11 +105,11 @@ ${section0}
 
 ---
 
-## 3. \`Goal\` 모드 (\`/goal\`, \`/3-goal\` - 목표 완수 모드)
-장기 실행 및 목표 완수를 위해 끝까지 포기하지 않고 자율 실행하는 모드입니다.
+## 3. \`Debug\` 모드 (\`/debug\`, \`/3-debug\`, \`/goal\` - 디버그 및 목표 완수)
+버그 해결과 목표 완수를 위해 끝까지 포기하지 않고 자율 실행하는 모드입니다.
 
-- 사용자가 설정한 목표가 100% 달성될 때까지 디버깅, 테스트, 자가 수정을 거듭하며 작업을 멈추지 않고 끝까지 수행합니다.
-- 복잡하거나 시간이 걸리는 작업에 적합합니다.
+- 사용자가 설정한 목표 및 버그가 100% 달성/해결될 때까지 디버깅, 테스트, 자가 수정을 거듭하며 작업을 멈추지 않고 끝까지 수행합니다.
+- 복잡하거나 원인 규명이 필요한 디버깅 작업에 적합합니다.
 
 ---
 
@@ -169,7 +123,7 @@ ${section0}
 
 ## 5. 대화 세션 모드 고정 (Sticky Session Mode)
 매번 프롬프트마다 커맨드를 치지 않아도 되도록 다음을 지원합니다:
-- 사용자가 "지금부터 ask 모드로 해줘", "ask 모드 고정", "plan 모드로 전환", "goal 모드로 해줘" 등 모드 유지를 요청하면, 이후 프롬프트에 슬래시 커맨드가 없더라도 명시적으로 해제하기 전까지 해당 모드를 계속 유지합니다.
+- 사용자가 "지금부터 ask 모드로 해줘", "ask 모드 고정", "plan 모드로 전환", "debug 모드로 해줘" 등 모드 유지를 요청하면, 이후 프롬프트에 슬래시 커맨드가 없더라도 명시적으로 해제하기 전까지 해당 모드를 계속 유지합니다.
 - 사용자가 "agent 모드로 돌아가줘", "모드 해제", "기본 모드로" 등을 요청하면 다시 기본 0번 상태(Full Agent)로 복귀합니다.
 `;
 }
@@ -192,10 +146,7 @@ function syncRuleFile(modeId) {
     if (!fs.existsSync(ruleDir)) {
       fs.mkdirSync(ruleDir, { recursive: true });
     }
-    const mode = MODES[modeId];
-    if (mode) {
-      fs.writeFileSync(path.join(ruleDir, 'current_mode.md'), mode.ruleContent, 'utf-8');
-    }
+    fs.writeFileSync(path.join(ruleDir, 'current_mode.md'), `mode: ${modeId}`, 'utf-8');
 
     // 3. Write to /Users/acb/antigravity repo if exists
     const repoPath = path.join(homeDir, 'antigravity');
@@ -209,9 +160,7 @@ function syncRuleFile(modeId) {
 }
 
 function updateUI() {
-  const mode = MODES[currentMode] || MODES.agent;
-  
-  // 1. Status Bar update
+  const mode = MODES[currentMode] || MODES.ask;
   if (statusBarItem) {
     statusBarItem.text = mode.badgeText;
     if (mode.badgeColor) {
@@ -221,19 +170,11 @@ function updateUI() {
     }
     statusBarItem.tooltip = `${mode.fullName}
 ${mode.desc}
-(클릭하여 모드 변경 / 단축키 Cmd+Alt+M)`;
-  }
-
-  // 2. Webview update
-  if (currentWebviewView) {
-    currentWebviewView.webview.postMessage({
-      type: 'updateMode',
-      mode: currentMode
-    });
+(클릭하여 모드 변경)`;
   }
 }
 
-function setMode(modeId, showNotification = true) {
+function setMode(modeId, showNotification = false) {
   if (!MODES[modeId]) return;
   currentMode = modeId;
   if (extContext) {
@@ -244,50 +185,80 @@ function setMode(modeId, showNotification = true) {
 
   if (showNotification) {
     const mode = MODES[modeId];
-    vscode.window.showInformationMessage(`Antigravity AI: ${mode.icon} ${mode.fullName}가 활성화되었습니다.`);
+    vscode.window.showInformationMessage(`Antigravity AI: ${mode.fullName}가 활성화되었습니다.`);
   }
 }
 
 function quickToggle() {
   if (currentMode === 'ask') {
-    setMode('agent');
+    setMode('agent', true);
   } else {
-    setMode('ask');
+    setMode('ask', true);
+  }
+}
+
+function startBridgeServer() {
+  if (bridgeServer) return;
+  try {
+    bridgeServer = http.createServer((req, res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', '*');
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+
+      const parsedUrl = new URL(req.url, 'http://127.0.0.1:47921');
+      if (parsedUrl.pathname === '/set-mode') {
+        const m = parsedUrl.searchParams.get('mode');
+        if (m && MODES[m]) {
+          setMode(m, false);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok', mode: currentMode }));
+      } else if (parsedUrl.pathname === '/get-mode') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ mode: currentMode }));
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+
+    bridgeServer.listen(47921, '127.0.0.1', () => {
+      console.log('Antigravity mode bridge server running on 127.0.0.1:47921');
+    });
+
+    bridgeServer.on('error', (e) => {
+      console.warn('Bridge server warning:', e.message);
+    });
+  } catch (err) {
+    console.error('Failed to start bridge server:', err);
   }
 }
 
 function activate(context) {
   extContext = context;
 
-  // Restore active mode from globalState or config files
+  // Restore active mode
   try {
     const saved = context.globalState.get('antigravity_active_mode');
     if (saved && MODES[saved]) {
       currentMode = saved;
     } else {
-      const homeDir = os.homedir();
-      const geminiPath = path.join(homeDir, '.gemini', 'config', 'GEMINI.md');
-      if (fs.existsSync(geminiPath)) {
-        const text = fs.readFileSync(geminiPath, 'utf-8');
-        if (text.includes('Ask` 모드 적용') || text.includes('Ask 모드(읽기 전용)')) {
-          currentMode = 'ask';
-        } else if (text.includes('Plan` 모드 적용')) {
-          currentMode = 'plan';
-        } else if (text.includes('Goal` 모드 적용')) {
-          currentMode = 'goal';
-        } else {
-          currentMode = 'ask';
-        }
-      } else {
-        currentMode = 'ask';
-      }
+      currentMode = 'ask';
     }
   } catch (e) {
     currentMode = 'ask';
   }
 
-  // Crucial: Always sync files on startup so AI engine is 100% matched with UI state
+  // Sync files on activation immediately
   syncRuleFile(currentMode);
+
+  // Start HTTP bridge server for toolbar pill button
+  startBridgeServer();
 
   // Create Status Bar Item
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 999);
@@ -301,25 +272,25 @@ function activate(context) {
     vscode.commands.registerCommand('antigravity.selectMode', async () => {
       const items = [
         {
-          label: `${currentMode === 'ask' ? '$(check) ' : ''}1. Ask 모드 (읽기 전용)`,
+          label: `${currentMode === 'ask' ? ' ' : ''}1. Ask 모드 (읽기 전용)`,
           description: '파일 수정/명령어 실행 절대 금지',
           detail: '오직 순수 질문 답변 및 코드 설명만 제공',
           id: 'ask'
         },
         {
-          label: `${currentMode === 'plan' ? '$(check) ' : ''}2. Plan 모드 (계획 수립)`,
+          label: `${currentMode === 'plan' ? ' ' : ''}2. Plan 모드 (계획 수립)`,
           description: '코드 작성 전 구현 계획 수립',
           detail: '기획서 작성 및 사용자 승인 후 코드 작업 진행',
           id: 'plan'
         },
         {
-          label: `${currentMode === 'goal' ? '$(check) ' : ''}3. Goal 모드 (목표 완수)`,
-          description: '100% 달성할 때까지 멈추지 않음',
-          detail: '자가 디버깅 및 테스트를 거듭하며 목표 완료까지 자율 수행',
-          id: 'goal'
+          label: `${currentMode === 'debug' ? ' ' : ''}3. Debug 모드 (버그 해결)`,
+          description: '100% 버그 해결을 위한 자율 디버깅',
+          detail: '자가 디버깅 및 테스트를 거듭하며 버그 완료까지 자율 수행',
+          id: 'debug'
         },
         {
-          label: `${currentMode === 'agent' ? '$(check) ' : ''}4. Agent 모드 (전권 자율)`,
+          label: `${currentMode === 'agent' ? ' ' : ''}4. Agent 모드 (전권 자율)`,
           description: '기본 모드 / 모든 권한 자율 활용',
           detail: '파일 생성, 수정, 삭제 및 터미널 명령어 실행 자율 완수',
           id: 'agent'
@@ -332,277 +303,25 @@ function activate(context) {
       });
 
       if (selected) {
-        setMode(selected.id);
+        setMode(selected.id, true);
       }
     }),
     vscode.commands.registerCommand('antigravity.quickToggle', () => {
       quickToggle();
     }),
-    vscode.commands.registerCommand('antigravity.setAskMode', () => setMode('ask')),
-    vscode.commands.registerCommand('antigravity.setPlanMode', () => setMode('plan')),
-    vscode.commands.registerCommand('antigravity.setGoalMode', () => setMode('goal')),
-    vscode.commands.registerCommand('antigravity.setAgentMode', () => setMode('agent'))
+    vscode.commands.registerCommand('antigravity.setAskMode', () => setMode('ask', true)),
+    vscode.commands.registerCommand('antigravity.setPlanMode', () => setMode('plan', true)),
+    vscode.commands.registerCommand('antigravity.setDebugMode', () => setMode('debug', true)),
+    vscode.commands.registerCommand('antigravity.setAgentMode', () => setMode('agent', true))
   );
-
-  // Register Webview View Provider for Sidebar
-  const modeViewProvider = {
-    resolveWebviewView(webviewView) {
-      currentWebviewView = webviewView;
-      webviewView.webview.options = {
-        enableScripts: true
-      };
-
-      webviewView.webview.html = getSidebarHtml(currentMode);
-
-      webviewView.webview.onDidReceiveMessage((message) => {
-        if (message.command === 'setMode') {
-          setMode(message.mode);
-        } else if (message.command === 'quickToggle') {
-          quickToggle();
-        }
-      });
-
-      webviewView.onDidDispose(() => {
-        currentWebviewView = null;
-      });
-    }
-  };
-
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider('antigravity.modesView', modeViewProvider)
-  );
-}
-
-function getSidebarHtml(activeModeId) {
-  return `<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Antigravity AI Modes</title>
-  <style>
-    body {
-      font-family: var(--vscode-font-family, sans-serif);
-      font-size: var(--vscode-font-size, 13px);
-      color: var(--vscode-foreground);
-      background-color: var(--vscode-sideBar-background);
-      margin: 0;
-      padding: 16px;
-      box-sizing: border-box;
-    }
-    .header {
-      margin-bottom: 16px;
-      border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border, rgba(255,255,255,0.1));
-      padding-bottom: 12px;
-    }
-    .title {
-      font-size: 15px;
-      font-weight: 600;
-      margin: 0 0 6px 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .subtitle {
-      font-size: 12px;
-      color: var(--vscode-descriptionForeground);
-      margin: 0;
-      line-height: 1.4;
-    }
-    .active-card {
-      background-color: var(--vscode-editor-background);
-      border: 1px solid var(--vscode-focusBorder, #007acc);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-    .active-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--vscode-descriptionForeground);
-      margin-bottom: 4px;
-    }
-    .active-mode-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: var(--vscode-textLink-foreground, #3794ff);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .active-desc {
-      font-size: 12px;
-      margin-top: 6px;
-      color: var(--vscode-foreground);
-      line-height: 1.4;
-    }
-    .modes-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .mode-btn {
-      background-color: var(--vscode-button-secondaryBackground, rgba(255,255,255,0.06));
-      color: var(--vscode-button-secondaryForeground, inherit);
-      border: 1px solid transparent;
-      border-radius: 6px;
-      padding: 10px 12px;
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.15s ease;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .mode-btn:hover {
-      background-color: var(--vscode-button-secondaryHoverBackground, rgba(255,255,255,0.12));
-      border-color: var(--vscode-focusBorder, #007acc);
-    }
-    .mode-btn.selected {
-      background-color: var(--vscode-button-background, #007acc);
-      color: var(--vscode-button-foreground, #ffffff);
-      border-color: var(--vscode-button-border, transparent);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-    .mode-btn-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-weight: 600;
-      font-size: 13px;
-    }
-    .mode-btn-desc {
-      font-size: 11px;
-      opacity: 0.85;
-      line-height: 1.3;
-    }
-    .toggle-section {
-      margin-top: 20px;
-      padding-top: 14px;
-      border-top: 1px solid var(--vscode-sideBarSectionHeader-border, rgba(255,255,255,0.1));
-    }
-    .quick-toggle-btn {
-      width: 100%;
-      background-color: var(--vscode-button-background, #007acc);
-      color: var(--vscode-button-foreground, #ffffff);
-      border: none;
-      border-radius: 6px;
-      padding: 10px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .quick-toggle-btn:hover {
-      background-color: var(--vscode-button-hoverBackground, #0062a3);
-    }
-    .shortcut-hint {
-      margin-top: 8px;
-      font-size: 11px;
-      text-align: center;
-      color: var(--vscode-descriptionForeground);
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="title">🪐 Antigravity AI Mode</div>
-    <div class="subtitle">별도의 UI 패널에서 원클릭으로 AI 동작 모드를 즉시 전환합니다.</div>
-  </div>
-
-  <div class="active-card">
-    <div class="active-label">CURRENT ACTIVE MODE</div>
-    <div class="active-mode-title" id="activeModeName">
-      ${MODES[activeModeId].icon} ${MODES[activeModeId].fullName}
-    </div>
-    <div class="active-desc" id="activeModeDesc">
-      ${MODES[activeModeId].desc}
-    </div>
-  </div>
-
-  <div class="modes-list">
-    <button class="mode-btn ${activeModeId === 'ask' ? 'selected' : ''}" onclick="selectMode('ask')">
-      <div class="mode-btn-header">
-        <span>🛡️ 1. Ask 모드</span>
-        <small>읽기 전용</small>
-      </div>
-      <div class="mode-btn-desc">파일 수정 및 터미널 실행 절대 금지, 안전한 질의응답</div>
-    </button>
-
-    <button class="mode-btn ${activeModeId === 'plan' ? 'selected' : ''}" onclick="selectMode('plan')">
-      <div class="mode-btn-header">
-        <span>📝 2. Plan 모드</span>
-        <small>계획 수립</small>
-      </div>
-      <div class="mode-btn-desc">즉시 작성 금지, 상세 기획서 작성 후 승인받아 실행</div>
-    </button>
-
-    <button class="mode-btn ${activeModeId === 'goal' ? 'selected' : ''}" onclick="selectMode('goal')">
-      <div class="mode-btn-header">
-        <span>🎯 3. Goal 모드</span>
-        <small>목표 완수</small>
-      </div>
-      <div class="mode-btn-desc">100% 달성할 때까지 자가 디버깅 및 테스트 완수</div>
-    </button>
-
-    <button class="mode-btn ${activeModeId === 'agent' ? 'selected' : ''}" onclick="selectMode('agent')">
-      <div class="mode-btn-header">
-        <span>⚡ 4. Agent 모드</span>
-        <small>전권 자율</small>
-      </div>
-      <div class="mode-btn-desc">모든 파일 수정/생성 및 터미널 명령어 실행 자율 해결</div>
-    </button>
-  </div>
-
-  <div class="toggle-section">
-    <button class="quick-toggle-btn" onclick="toggleAskAgent()">
-      🔄 Ask ↔ Agent 빠른 토글
-    </button>
-    <div class="shortcut-hint">단축키: <b>Cmd+Alt+A</b> (Mac) / <b>Ctrl+Alt+A</b> (Win)</div>
-    <div class="shortcut-hint" style="margin-top:4px;">상단 툴바 / 하단 상태바 또는 <b>Cmd+Alt+M</b></div>
-  </div>
-
-  <script>
-    const vscode = acquireVsCodeApi();
-    const modes = ${JSON.stringify(MODES)};
-
-    function selectMode(modeId) {
-      vscode.postMessage({ command: 'setMode', mode: modeId });
-    }
-
-    function toggleAskAgent() {
-      vscode.postMessage({ command: 'quickToggle' });
-    }
-
-    window.addEventListener('message', event => {
-      const msg = event.data;
-      if (msg.type === 'updateMode') {
-        const mode = modes[msg.mode];
-        if (mode) {
-          document.getElementById('activeModeName').innerHTML = mode.icon + ' ' + mode.fullName;
-          document.getElementById('activeModeDesc').textContent = mode.desc;
-
-          document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.classList.remove('selected');
-          });
-          const btn = document.querySelector(\`button[onclick="selectMode('\${msg.mode}')"]\`);
-          if (btn) btn.classList.add('selected');
-        }
-      }
-    });
-  </script>
-</body>
-</html>`;
 }
 
 function deactivate() {
   if (statusBarItem) {
     statusBarItem.dispose();
+  }
+  if (bridgeServer) {
+    bridgeServer.close();
   }
 }
 

@@ -1,8 +1,8 @@
 {
   "name": "antigravity-mode-selector",
   "displayName": "Antigravity AI Mode Selector",
-  "description": "Interactive visual UI and Status Bar toggle for Antigravity AI modes (Ask, Plan, Goal, Agent)",
-  "version": "1.0.0",
+  "description": "Cursor-style Mode Selector in Chat Toolbar for Antigravity AI modes (Ask, Plan, Debug, Agent)",
+  "version": "1.1.0",
   "publisher": "acb",
   "engines": {
     "vscode": "^1.80.0"
@@ -15,35 +15,15 @@
   ],
   "main": "./extension.js",
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "antigravity-modes-container",
-          "title": "Antigravity AI Modes",
-          "icon": "media/icon.svg"
-        }
-      ]
-    },
-    "views": {
-      "antigravity-modes-container": [
-        {
-          "type": "webview",
-          "id": "antigravity.modesView",
-          "name": "Mode Control Panel"
-        }
-      ]
-    },
     "commands": [
       {
         "command": "antigravity.selectMode",
         "title": "AI Mode 선택",
-        "icon": "$(shield)",
         "category": "Antigravity"
       },
       {
         "command": "antigravity.quickToggle",
         "title": "Ask ↔ Agent 토글",
-        "icon": "$(sync)",
         "category": "Antigravity"
       },
       {
@@ -57,8 +37,8 @@
         "category": "Antigravity"
       },
       {
-        "command": "antigravity.setGoalMode",
-        "title": "Set Mode: Goal (Autonomous)",
+        "command": "antigravity.setDebugMode",
+        "title": "Set Mode: Debug (Bug Fixing)",
         "category": "Antigravity"
       },
       {
@@ -67,20 +47,6 @@
         "category": "Antigravity"
       }
     ],
-    "menus": {
-      "editor/title": [
-        {
-          "command": "antigravity.selectMode",
-          "group": "navigation@1",
-          "when": "true"
-        },
-        {
-          "command": "antigravity.quickToggle",
-          "group": "navigation@2",
-          "when": "true"
-        }
-      ]
-    },
     "keybindings": [
       {
         "command": "antigravity.selectMode",
