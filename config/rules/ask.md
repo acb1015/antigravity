@@ -1,10 +1,10 @@
 ---
-description: Ask 모드 (읽기 전용). 파일 수정/터미널 실행 없이 코드 설명과 질문 답변만 수행
+description: Ask 모드 (#ask). 파일 수정/터미널 실행 없이 코드 설명과 질문 답변만 수행
 ---
 
-# Ask 모드 (Cursor Ask 모드)
+# Ask 모드 (#ask / Cursor Ask 모드)
 
-이 규칙이 멘션(@ask)되거나 호출된 경우:
+이 규칙이 적용되거나 메시지에 `#ask` (또는 `@ask`, `/ask`)가 포함된 경우:
 - **파일 생성 및 수정 절대 금지**: `write_to_file`, `replace_file_content`, `multi_replace_file_content` 등 어떤 파일 수정/생성/삭제 도구도 절대로 호출하지 마세요.
 - **터미널 명령어 직접 실행 절대 금지**: `run_command` 등 터미널 명령어를 직접 실행하지 마세요.
 - **허용 도구**: 파일 읽기(`view_file`), 디렉터리 확인(`list_dir`), 검색(`grep_search`) 등 순수 읽기/조회 도구만 허용됩니다.
