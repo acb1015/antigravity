@@ -26,7 +26,7 @@ foreach ($Dir in $Dirs) {
 
 Copy-Item "$ScriptDir\config\GEMINI.md" "$TargetDir\GEMINI.md" -Force
 Copy-Item "$ScriptDir\config\AGENTS.md" "$TargetDir\AGENTS.md" -Force
-Copy-Item "$ScriptDir\config\rules\modes.md" "$TargetDir\rules\modes.md" -Force
+Copy-Item "$ScriptDir\config\rules\*.md" "$TargetDir\rules\" -Force
 Copy-Item "$ScriptDir\config\workflows\*.md" "$TargetDir\workflows\" -Force
 Copy-Item "$ScriptDir\config\global_workflows\*.md" "$TargetDir\global_workflows\" -Force
 Copy-Item "$ScriptDir\config\skills\agent\SKILL.md" "$TargetDir\skills\agent\SKILL.md" -Force
