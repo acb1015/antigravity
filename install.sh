@@ -8,12 +8,12 @@ export SCRIPT_DIR
 TARGET_DIR="${HOME}/.gemini/config"
 
 # 1. Antigravity AI Customizations (~/.gemini/config)
-echo "[1/3] Installing AI Modes (/1-ask, /2-plan, /3-goal, /4-agent)..."
+echo "[1/3] Installing AI Modes (/ask, /plan, /goal, /agent)..."
 mkdir -p "${TARGET_DIR}/rules"
 mkdir -p "${TARGET_DIR}/workflows"
 mkdir -p "${TARGET_DIR}/global_workflows"
 
-# Clean up legacy skills
+# Clean up legacy workflows & skills
 rm -rf "${TARGET_DIR}/skills/agent" "${TARGET_DIR}/skills/ask" "${TARGET_DIR}/skills/plan"
 rm -rf "${TARGET_DIR}/workflows/"* "${TARGET_DIR}/global_workflows/"*
 

@@ -7,7 +7,7 @@ $ScriptDir = $PSScriptRoot
 $TargetDir = Join-Path $env:USERPROFILE ".gemini\config"
 
 # 1. AI Customizations (~/.gemini/config)
-Write-Host "[1/3] Installing AI Modes (/1-ask, /2-plan, /3-goal, /4-agent)..." -ForegroundColor Yellow
+Write-Host "[1/3] Installing AI Modes (/ask, /plan, /goal, /agent)..." -ForegroundColor Yellow
 
 $Dirs = @(
     "$TargetDir\rules",
