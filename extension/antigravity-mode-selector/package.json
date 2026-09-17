@@ -1,8 +1,8 @@
 {
-  "name": "antigravity-mode-selector",
+  "name": "mode-selector-ui",
   "displayName": "Antigravity AI Mode Selector",
-  "description": "Cursor-style Mode Selector in Chat Toolbar for Antigravity AI modes (Ask, Plan, Debug, Agent)",
-  "version": "1.1.0",
+  "description": "Mode Selector in Status Bar for Antigravity AI modes (Agent, Ask, Plan, Goal)",
+  "version": "1.2.0",
   "publisher": "acb",
   "engines": {
     "vscode": "^1.80.0"
@@ -27,6 +27,11 @@
         "category": "Antigravity"
       },
       {
+        "command": "antigravity.setAgentMode",
+        "title": "Set Mode: Agent (Full Agent)",
+        "category": "Antigravity"
+      },
+      {
         "command": "antigravity.setAskMode",
         "title": "Set Mode: Ask (Read-Only)",
         "category": "Antigravity"
@@ -37,13 +42,8 @@
         "category": "Antigravity"
       },
       {
-        "command": "antigravity.setDebugMode",
-        "title": "Set Mode: Debug (Bug Fixing)",
-        "category": "Antigravity"
-      },
-      {
-        "command": "antigravity.setAgentMode",
-        "title": "Set Mode: Agent (Full Agent)",
+        "command": "antigravity.setGoalMode",
+        "title": "Set Mode: Goal (Target/Goal Completion)",
         "category": "Antigravity"
       }
     ],
