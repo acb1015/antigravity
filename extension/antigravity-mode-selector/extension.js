@@ -1,52 +1,50 @@
-const vscode = require('vscode');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const http = require('http');
+const vscode = require("vscode");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
 
 const MODES = {
   ask: {
-    id: 'ask',
-    name: 'Ask 모드',
-    badgeText: '$(comment-discussion) AI: ASK',
-    fullName: 'Ask 모드 (읽기 전용)',
-    badgeColor: 'statusBarItem.warningBackground',
-    desc: '파일 수정 및 명령어 실행 절대 금지 (순수 질의응답 및 설명)'
+    id: "ask",
+    name: "Ask",
+    text: "$(comment-discussion) Ask",
+    color: "#4ade80",
+    fullName: "Ask 모드 (읽기 전용)",
+    desc: "파일 수정 및 명령어 실행 절대 금지 (순수 질의응답 및 설명)"
   },
   plan: {
-    id: 'plan',
-    name: 'Plan 모드',
-    badgeText: '$(book) AI: PLAN',
-    fullName: 'Plan 모드 (계획 수립)',
-    badgeColor: undefined,
-    desc: '코드 작성 전 상세 기획서 및 구현 계획 승인'
+    id: "plan",
+    name: "Plan",
+    text: "$(list-unordered) Plan",
+    color: "#fbbf24",
+    fullName: "Plan 모드 (계획 수립)",
+    desc: "코드 작성 전 상세 기획서 및 구현 계획 승인"
   },
   debug: {
-    id: 'debug',
-    name: 'Debug 모드',
-    badgeText: '$(bug) AI: DEBUG',
-    fullName: 'Debug 모드 (버그 해결)',
-    badgeColor: undefined,
-    desc: '원인 분석 및 100% 버그 해결을 위한 자율 디버깅'
+    id: "debug",
+    name: "Debug",
+    text: "$(bug) Debug",
+    color: "#f43f5e",
+    fullName: "Debug 모드 (버그 해결)",
+    desc: "원인 분석 및 100% 버그 해결을 위한 자율 디버깅"
   },
   agent: {
-    id: 'agent',
-    name: 'Agent 모드',
-    badgeText: '$(zap) AI: AGENT',
-    fullName: 'Agent 모드 (전권 자율)',
-    badgeColor: undefined,
-    desc: '모든 권한 자율 활용 (파일 생성/수정, 터미널 실행)'
+    id: "agent",
+    name: "Agent",
+    text: "$(zap) Agent",
+    color: "#e5e5e5",
+    fullName: "Agent 모드 (전권 자율)",
+    desc: "모든 권한 자율 활용 (파일 생성/수정, 터미널 실행)"
   }
 };
 
-let currentMode = 'ask';
+let currentMode = "ask";
 let statusBarItem;
 let extContext = null;
-let bridgeServer = null;
 
 function generateFullGeminiRule(modeId) {
-  let section0 = '';
-  if (modeId === 'ask') {
+  let section0 = "";
+  if (modeId === "ask") {
     section0 = `## 0. 기본 동작 (UI 설정) -> \`Ask\` 모드 적용 (최우선 강제 적용)
 - 현재 Antigravity UI에서 사용자가 **Ask 모드(읽기 전용)**를 선택해 두었습니다.
 - 사용자의 메시지에 별도의 슬래시 커맨드가 없더라도, **무조건 최우선으로 Ask 모드로 동작**해야 합니다.
@@ -55,14 +53,14 @@ function generateFullGeminiRule(modeId) {
 - **허용 도구**: 파일 읽기(\`view_file\`), 디렉터리 확인(\`list_dir\`), 검색(\`grep_search\`) 등 순수 읽기/조회 도구만 허용됩니다.
 - **터미널 실행이 필요한 경우**: 환경 확인이나 상태 조회가 꼭 필요한 경우에도 절대 직접 실행하지 말고, 사용자가 직접 복사해서 실행할 수 있도록 명령어와 이유만 코드 블록으로 안내하세요.
 - **응답 방식**: 마크다운 텍스트, 설명, 제안 코드 블록으로만 답변하세요. [🛡️ ASK MODE] 같은 인위적인 대괄호 배지나 태그는 일절 출력하지 말고, 코드 수정 요청 시 "현재 Ask 모드(읽기 전용)이므로 파일을 직접 수정하지 않습니다."라고 친절한 대화체로 정중히 설명하고 제안 코드 블록을 제공하세요.`;
-  } else if (modeId === 'plan') {
+  } else if (modeId === "plan") {
     section0 = `## 0. 기본 동작 (UI 설정) -> \`Plan\` 모드 적용 (최우선 강제 적용)
 - 현재 Antigravity UI에서 사용자가 **Plan 모드(계획 수립)**를 선택해 두었습니다.
 - 사용자의 메시지에 별도의 슬래시 커맨드가 없더라도, **무조건 최우선으로 Plan 모드로 동작**해야 합니다.
 - **즉각적인 코드 작성 금지**: 파일 수정이나 코드 작성을 바로 시작하지 마세요.
 - **상세 구현 계획 수립**: 요구사항 분석, 변경/생성할 파일 목록, 핵심 로직 및 설계, 검증(테스트) 계획을 정리한 기획서/구현 계획을 먼저 작성하여 제시하세요.
 - **승인 후 실행**: 사용자에게 계획을 공유하고 질문 또는 승인을 요청하세요. 사용자가 계획을 확인하고 승인한 후에 비로소 실행 단계(Agent)로 넘어갑니다.`;
-  } else if (modeId === 'debug') {
+  } else if (modeId === "debug") {
     section0 = `## 0. 기본 동작 (UI 설정) -> \`Debug\` 모드 적용 (최우선 강제 적용)
 - 현재 Antigravity UI에서 사용자가 **Debug 모드(버그 분석 및 해결)**를 선택해 두었습니다.
 - 사용자의 메시지에 별도의 슬래시 커맨드가 없더라도, **무조건 최우선으로 Debug 모드로 동작**해야 합니다.
@@ -81,7 +79,7 @@ function generateFullGeminiRule(modeId) {
 
 ---
 
-${section0}
+\${section0}
 
 ---
 
@@ -134,51 +132,45 @@ function syncRuleFile(modeId) {
     const fullContent = generateFullGeminiRule(modeId);
 
     // 1. Write ~/.gemini/config/GEMINI.md and AGENTS.md
-    const geminiConfigDir = path.join(homeDir, '.gemini', 'config');
+    const geminiConfigDir = path.join(homeDir, ".gemini", "config");
     if (!fs.existsSync(geminiConfigDir)) {
       fs.mkdirSync(geminiConfigDir, { recursive: true });
     }
-    fs.writeFileSync(path.join(geminiConfigDir, 'GEMINI.md'), fullContent, 'utf-8');
-    fs.writeFileSync(path.join(geminiConfigDir, 'AGENTS.md'), fullContent, 'utf-8');
+    fs.writeFileSync(path.join(geminiConfigDir, "GEMINI.md"), fullContent, "utf-8");
+    fs.writeFileSync(path.join(geminiConfigDir, "AGENTS.md"), fullContent, "utf-8");
 
     // 2. Write rules/current_mode.md
-    const ruleDir = path.join(geminiConfigDir, 'rules');
+    const ruleDir = path.join(geminiConfigDir, "rules");
     if (!fs.existsSync(ruleDir)) {
       fs.mkdirSync(ruleDir, { recursive: true });
     }
-    fs.writeFileSync(path.join(ruleDir, 'current_mode.md'), `mode: ${modeId}`, 'utf-8');
+    fs.writeFileSync(path.join(ruleDir, "current_mode.md"), `mode: ${modeId}`, "utf-8");
 
     // 3. Write to /Users/acb/antigravity repo if exists
-    const repoPath = path.join(homeDir, 'antigravity');
+    const repoPath = path.join(homeDir, "antigravity");
     if (fs.existsSync(repoPath)) {
-      fs.writeFileSync(path.join(repoPath, 'GEMINI.md'), fullContent, 'utf-8');
-      fs.writeFileSync(path.join(repoPath, 'AGENTS.md'), fullContent, 'utf-8');
+      fs.writeFileSync(path.join(repoPath, "GEMINI.md"), fullContent, "utf-8");
+      fs.writeFileSync(path.join(repoPath, "AGENTS.md"), fullContent, "utf-8");
     }
   } catch (err) {
-    console.error('Failed to sync rule files:', err);
+    console.error("Failed to sync rule files:", err);
   }
 }
 
 function updateUI() {
   const mode = MODES[currentMode] || MODES.ask;
   if (statusBarItem) {
-    statusBarItem.text = mode.badgeText;
-    if (mode.badgeColor) {
-      statusBarItem.backgroundColor = new vscode.ThemeColor(mode.badgeColor);
-    } else {
-      statusBarItem.backgroundColor = undefined;
-    }
-    statusBarItem.tooltip = `${mode.fullName}
-${mode.desc}
-(클릭하여 모드 변경)`;
+    statusBarItem.text = mode.text;
+    statusBarItem.color = mode.color;
+    statusBarItem.tooltip = `${mode.fullName}\n${mode.desc}\n(클릭하여 AI 모드 변경)`;
   }
 }
 
-function setMode(modeId, showNotification = false) {
+function setMode(modeId, showNotification = true) {
   if (!MODES[modeId]) return;
   currentMode = modeId;
   if (extContext) {
-    extContext.globalState.update('antigravity_active_mode', modeId);
+    extContext.globalState.update("antigravity_active_mode", modeId);
   }
   syncRuleFile(modeId);
   updateUI();
@@ -190,52 +182,10 @@ function setMode(modeId, showNotification = false) {
 }
 
 function quickToggle() {
-  if (currentMode === 'ask') {
-    setMode('agent', true);
+  if (currentMode === "ask") {
+    setMode("agent", true);
   } else {
-    setMode('ask', true);
-  }
-}
-
-function startBridgeServer() {
-  if (bridgeServer) return;
-  try {
-    bridgeServer = http.createServer((req, res) => {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', '*');
-      if (req.method === 'OPTIONS') {
-        res.writeHead(204);
-        res.end();
-        return;
-      }
-
-      const parsedUrl = new URL(req.url, 'http://127.0.0.1:47921');
-      if (parsedUrl.pathname === '/set-mode') {
-        const m = parsedUrl.searchParams.get('mode');
-        if (m && MODES[m]) {
-          setMode(m, false);
-        }
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok', mode: currentMode }));
-      } else if (parsedUrl.pathname === '/get-mode') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ mode: currentMode }));
-      } else {
-        res.writeHead(404);
-        res.end();
-      }
-    });
-
-    bridgeServer.listen(47921, '127.0.0.1', () => {
-      console.log('Antigravity mode bridge server running on 127.0.0.1:47921');
-    });
-
-    bridgeServer.on('error', (e) => {
-      console.warn('Bridge server warning:', e.message);
-    });
-  } catch (err) {
-    console.error('Failed to start bridge server:', err);
+    setMode("ask", true);
   }
 }
 
@@ -244,84 +194,78 @@ function activate(context) {
 
   // Restore active mode
   try {
-    const saved = context.globalState.get('antigravity_active_mode');
+    const saved = context.globalState.get("antigravity_active_mode");
     if (saved && MODES[saved]) {
       currentMode = saved;
     } else {
-      currentMode = 'ask';
+      currentMode = "ask";
     }
   } catch (e) {
-    currentMode = 'ask';
+    currentMode = "ask";
   }
 
   // Sync files on activation immediately
   syncRuleFile(currentMode);
 
-  // Start HTTP bridge server for toolbar pill button
-  startBridgeServer();
-
-  // Create Status Bar Item
-  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 999);
-  statusBarItem.command = 'antigravity.selectMode';
+  // Create Status Bar Item placed immediately to the left of Antigravity - Settings (priority 1, Right)
+  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1);
+  statusBarItem.command = "antigravity.selectMode";
   updateUI();
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
   // Register Commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('antigravity.selectMode', async () => {
+    vscode.commands.registerCommand("antigravity.selectMode", async () => {
       const items = [
         {
-          label: `${currentMode === 'ask' ? ' ' : ''}1. Ask 모드 (읽기 전용)`,
-          description: '파일 수정/명령어 실행 절대 금지',
-          detail: '오직 순수 질문 답변 및 코드 설명만 제공',
-          id: 'ask'
+          label: `${currentMode === "ask" ? "$(check) " : ""}Ask 모드 (읽기 전용)`,
+          description: "파일 수정/명령어 실행 절대 금지",
+          detail: "순수 질문 답변 및 코드 설명 (Cursor Ask 동일)",
+          id: "ask"
         },
         {
-          label: `${currentMode === 'plan' ? ' ' : ''}2. Plan 모드 (계획 수립)`,
-          description: '코드 작성 전 구현 계획 수립',
-          detail: '기획서 작성 및 사용자 승인 후 코드 작업 진행',
-          id: 'plan'
+          label: `${currentMode === "plan" ? "$(check) " : ""}Plan 모드 (계획 수립)`,
+          description: "코드 작성 전 구현 계획 수립",
+          detail: "기획서 작성 및 승인 후 실행 (Cursor Plan 동일)",
+          id: "plan"
         },
         {
-          label: `${currentMode === 'debug' ? ' ' : ''}3. Debug 모드 (버그 해결)`,
-          description: '100% 버그 해결을 위한 자율 디버깅',
-          detail: '자가 디버깅 및 테스트를 거듭하며 버그 완료까지 자율 수행',
-          id: 'debug'
+          label: `${currentMode === "debug" ? "$(check) " : ""}Debug 모드 (버그 해결)`,
+          description: "100% 버그 해결을 위한 자율 디버깅",
+          detail: "자가 디버깅 및 테스트를 거듭하며 버그 완료까지 자율 수행",
+          id: "debug"
         },
         {
-          label: `${currentMode === 'agent' ? ' ' : ''}4. Agent 모드 (전권 자율)`,
-          description: '기본 모드 / 모든 권한 자율 활용',
-          detail: '파일 생성, 수정, 삭제 및 터미널 명령어 실행 자율 완수',
-          id: 'agent'
+          label: `${currentMode === "agent" ? "$(check) " : ""}Agent 모드 (전권 자율)`,
+          description: "기본 모드 / 모든 권한 자율 활용",
+          detail: "파일 생성, 수정, 삭제 및 터미널 실행 자율 완수 (Cursor Agent 동일)",
+          id: "agent"
         }
       ];
 
       const selected = await vscode.window.showQuickPick(items, {
         placeHolder: `현재 모드: [${MODES[currentMode].fullName}] - 전환할 AI 모드를 선택하세요`,
-        title: 'Antigravity AI 모드 선택'
+        title: "Antigravity AI 모드 선택"
       });
 
       if (selected) {
         setMode(selected.id, true);
       }
     }),
-    vscode.commands.registerCommand('antigravity.quickToggle', () => {
+    vscode.commands.registerCommand("antigravity.quickToggle", () => {
       quickToggle();
     }),
-    vscode.commands.registerCommand('antigravity.setAskMode', () => setMode('ask', true)),
-    vscode.commands.registerCommand('antigravity.setPlanMode', () => setMode('plan', true)),
-    vscode.commands.registerCommand('antigravity.setDebugMode', () => setMode('debug', true)),
-    vscode.commands.registerCommand('antigravity.setAgentMode', () => setMode('agent', true))
+    vscode.commands.registerCommand("antigravity.setAskMode", () => setMode("ask", true)),
+    vscode.commands.registerCommand("antigravity.setPlanMode", () => setMode("plan", true)),
+    vscode.commands.registerCommand("antigravity.setDebugMode", () => setMode("debug", true)),
+    vscode.commands.registerCommand("antigravity.setAgentMode", () => setMode("agent", true))
   );
 }
 
 function deactivate() {
   if (statusBarItem) {
     statusBarItem.dispose();
-  }
-  if (bridgeServer) {
-    bridgeServer.close();
   }
 }
 
