@@ -11,7 +11,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "*"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -36,12 +36,14 @@
     "commands": [
       {
         "command": "antigravity.selectMode",
-        "title": "Select AI Mode (Menu)",
+        "title": "AI Mode 선택",
+        "icon": "$(shield)",
         "category": "Antigravity"
       },
       {
         "command": "antigravity.quickToggle",
-        "title": "Quick Toggle (Ask / Agent)",
+        "title": "Ask ↔ Agent 토글",
+        "icon": "$(sync)",
         "category": "Antigravity"
       },
       {
@@ -65,6 +67,20 @@
         "category": "Antigravity"
       }
     ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "antigravity.selectMode",
+          "group": "navigation@1",
+          "when": "true"
+        },
+        {
+          "command": "antigravity.quickToggle",
+          "group": "navigation@2",
+          "when": "true"
+        }
+      ]
+    },
     "keybindings": [
       {
         "command": "antigravity.selectMode",
