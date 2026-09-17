@@ -1,0 +1,81 @@
+{
+  "name": "antigravity-mode-selector",
+  "displayName": "Antigravity AI Mode Selector",
+  "description": "Interactive visual UI and Status Bar toggle for Antigravity AI modes (Ask, Plan, Goal, Agent)",
+  "version": "1.0.0",
+  "publisher": "acb",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "antigravity-modes-container",
+          "title": "Antigravity AI Modes",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "antigravity-modes-container": [
+        {
+          "type": "webview",
+          "id": "antigravity.modesView",
+          "name": "Mode Control Panel"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "antigravity.selectMode",
+        "title": "Select AI Mode (Menu)",
+        "category": "Antigravity"
+      },
+      {
+        "command": "antigravity.quickToggle",
+        "title": "Quick Toggle (Ask / Agent)",
+        "category": "Antigravity"
+      },
+      {
+        "command": "antigravity.setAskMode",
+        "title": "Set Mode: Ask (Read-Only)",
+        "category": "Antigravity"
+      },
+      {
+        "command": "antigravity.setPlanMode",
+        "title": "Set Mode: Plan (Planning)",
+        "category": "Antigravity"
+      },
+      {
+        "command": "antigravity.setGoalMode",
+        "title": "Set Mode: Goal (Autonomous)",
+        "category": "Antigravity"
+      },
+      {
+        "command": "antigravity.setAgentMode",
+        "title": "Set Mode: Agent (Full Agent)",
+        "category": "Antigravity"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "antigravity.selectMode",
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m"
+      },
+      {
+        "command": "antigravity.quickToggle",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a"
+      }
+    ]
+  }
+}

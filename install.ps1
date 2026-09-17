@@ -1,13 +1,13 @@
 # PowerShell installer for Windows
 $ErrorActionPreference = "Stop"
 
-Write-Host "🚀 Installing Antigravity Custom Modes & IDE Configuration..." -ForegroundColor Cyan
+Write-Host "🚀 Installing Antigravity Custom Modes & Complete UI Environment..." -ForegroundColor Cyan
 
 $ScriptDir = $PSScriptRoot
 $TargetDir = Join-Path $env:USERPROFILE ".gemini\config"
 
 # 1. AI Customizations (~/.gemini/config)
-Write-Host "[1/2] Installing AI Modes (/1-ask, /2-plan, /3-goal, /4-agent)..." -ForegroundColor Yellow
+Write-Host "[1/3] Installing AI Modes (/1-ask, /2-plan, /3-goal, /4-agent)..." -ForegroundColor Yellow
 
 $Dirs = @(
     "$TargetDir\rules",
@@ -43,8 +43,17 @@ Copy-Item "$ScriptDir\config\workflows\*.md" "$TargetDir\workflows\" -Force
 Copy-Item "$ScriptDir\config\global_workflows\*.md" "$TargetDir\global_workflows\" -Force
 Write-Host "  ✓ AI Modes installed to $TargetDir." -ForegroundColor Green
 
-# 2. IDE Editor Settings (Tab Autocomplete)
-Write-Host "[2/2] Configuring IDE Editor (Tab auto-completion & zero-delay suggestions)..." -ForegroundColor Yellow
+# 2. Antigravity Dedicated Mode Selector UI Extension
+Write-Host "[2/3] Installing Antigravity Dedicated Mode Selector UI Extension..." -ForegroundColor Yellow
+$ExtTargetDir = Join-Path $env:USERPROFILE ".antigravity-ide\extensions\antigravity-mode-selector"
+if (-not (Test-Path $ExtTargetDir)) {
+    New-Item -ItemType Directory -Path $ExtTargetDir -Force | Out-Null
+}
+Copy-Item "$ScriptDir\extension\antigravity-mode-selector\*" $ExtTargetDir -Recurse -Force
+Write-Host "  ✓ Dedicated Mode UI Extension installed." -ForegroundColor Green
+
+# 3. IDE Editor Settings (Tab Autocomplete)
+Write-Host "[3/3] Configuring IDE Editor (Tab auto-completion & zero-delay suggestions)..." -ForegroundColor Yellow
 $IdeUserDir = Join-Path $env:APPDATA "Antigravity IDE\User"
 if (-not (Test-Path $IdeUserDir)) {
     New-Item -ItemType Directory -Path $IdeUserDir -Force | Out-Null
@@ -73,5 +82,5 @@ Copy-Item $SourceKbPath $TargetKbPath -Force
 Write-Host "  ✓ IDE keybindings.json (Tab priority on suggestions) configured." -ForegroundColor Green
 
 Write-Host ""
-Write-Host "✅ All Antigravity AI modes & Tab autocomplete settings installed successfully!" -ForegroundColor Green
+Write-Host "✅ All Antigravity AI modes, Dedicated UI extension & Tab autocomplete installed successfully!" -ForegroundColor Green
 Write-Host "💡 Tip: In Antigravity IDE, press Ctrl+Shift+P -> 'Developer: Reload Window' to apply immediately." -ForegroundColor Cyan
