@@ -99,7 +99,7 @@ function generateFullGeminiRule(modeId) {
 
 ---
 
-\${section0}
+${section0}
 
 ---
 
@@ -168,6 +168,21 @@ function syncRuleFile(modeId) {
       fs.writeFileSync(path.join(repoPath, 'GEMINI.md'), fullContent, 'utf-8');
       fs.writeFileSync(path.join(repoPath, 'AGENTS.md'), fullContent, 'utf-8');
     }
+
+    // 4. [CRITICAL] Workspace Auto-Sync: 어디서든 어떤 프로젝트를 열어도 실시간 영구 동기화
+    if (vscode.workspace && vscode.workspace.workspaceFolders) {
+      for (const folder of vscode.workspace.workspaceFolders) {
+        const folderPath = folder.uri.fsPath;
+        if (folderPath && fs.existsSync(folderPath)) {
+          try {
+            fs.writeFileSync(path.join(folderPath, 'GEMINI.md'), fullContent, 'utf-8');
+            fs.writeFileSync(path.join(folderPath, 'AGENTS.md'), fullContent, 'utf-8');
+          } catch (folderErr) {
+            console.error(`Failed to sync to workspace folder ${folderPath}:`, folderErr);
+          }
+        }
+      }
+    }
   } catch (err) {
     console.error('Failed to sync rule files:', err);
   }
@@ -230,6 +245,13 @@ function activate(context) {
   updateUI();
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
+
+  // Auto-sync when a new workspace or project folder is opened
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      syncRuleFile(currentMode);
+    })
+  );
 
   // Register Commands
   context.subscriptions.push(
